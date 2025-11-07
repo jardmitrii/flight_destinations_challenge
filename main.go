@@ -24,9 +24,9 @@ var flightRoutes = []string{
 
 const (
 	// chunkSize determines how many routes are processed in a single job
-	chunkSize = 2
+	chunkSize = 1
 	// numberOfWorkers defines the concurrent worker threads processing routes
-	numberOfWorkers = 2
+	numberOfWorkers = 1
 )
 
 func main() {
@@ -61,7 +61,7 @@ func countDestinations(ctx context.Context, origin string, flightRoutes []string
 
 	// Spawn worker goroutines
 	for i := 0; i < numberOfWorkers; i++ {
-		wg.Go(func() { worker(ctx, i, jobs, results) })
+		wg.Go(func() { worker(ctx, i, jobs, results, getDestination) })
 	}
 
 	// Add jobs and close the jobs channel when done
