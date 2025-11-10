@@ -7,21 +7,27 @@ import (
 	"time"
 )
 
-func fakeGetDestination(_, route string) (string, bool) {
-	// Example: just return the route as destination if non-empty
-	if route == "" {
-		return "", false
+func fakeGetDestination(j job) result {
+	// Example: just return the routes as destinations if non-empty
+	if j.routes == nil {
+		return result{}
 	}
-	return route, true
+
+	d := map[string]struct{}{}
+	for _, route := range j.routes {
+		if route == "" {
+			continue
+		}
+		d[route] = struct{}{}
+	}
+	return result{destinations: d}
 }
 
-func TestWorker(t *testing.T) {
+func Test_startWorkers(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	jobs := make(chan job, 1)
-	results := make(chan result, 1)
-	defer close(results)
 
 	// Prepare a job with routes including duplicates
 	testJob := job{
@@ -32,7 +38,7 @@ func TestWorker(t *testing.T) {
 	jobs <- testJob
 	close(jobs)
 
-	go worker(ctx, 1, jobs, results, fakeGetDestination)
+	results := startWorkers(ctx, 1, jobs, fakeGetDestination)
 
 	select {
 	case res := <-results:
@@ -49,19 +55,15 @@ func TestWorker(t *testing.T) {
 	}
 }
 
-func TestWorker_ContextCancel(t *testing.T) {
+func Test_startWorkers_ContextCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	jobs := make(chan job)
-	results := make(chan result)
 	defer close(jobs)
 
 	// Cancel context immediately
 	cancel()
 
-	go func() {
-		worker(ctx, 1, jobs, results, fakeGetDestination)
-		close(results)
-	}()
+	results := startWorkers(ctx, 1, jobs, fakeGetDestination)
 
 	select {
 	case <-results:

@@ -37,12 +37,7 @@ func TestAddJobs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
-			jobs := make(chan job, len(tt.routes)) // buffered to avoid blocking
-
-			go func() {
-				addJobs(ctx, tt.origin, tt.routes, tt.chunkSize, jobs)
-				close(jobs)
-			}()
+			jobs := addJobs(ctx, tt.origin, tt.routes, len(tt.routes), tt.chunkSize)
 
 			var got []job
 			for j := range jobs {
@@ -68,12 +63,7 @@ func TestAddJobs_ContextCancelledBeforeAllJobsSent(t *testing.T) {
 	chunkSize := 2
 
 	ctx, cancel := context.WithCancel(context.Background())
-	jobs := make(chan job, len(routes)/chunkSize+1)
-
-	go func() {
-		addJobs(ctx, origin, routes, chunkSize, jobs)
-		close(jobs)
-	}()
+	jobs := addJobs(ctx, origin, routes, len(routes)/chunkSize+1, chunkSize)
 
 	// Cancel context to simulate early termination
 	cancel()

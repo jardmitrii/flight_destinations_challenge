@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"maps"
-	"os"
 	"os/signal"
+	"runtime"
 	"slices"
-	"sync"
 	"syscall"
+	"time"
 )
 
 // flightRoutes - a predefined list of flight routes
@@ -39,7 +39,6 @@ func main() {
 	fmt.Println(countDestinations(ctx, "LON", flightRoutes))
 	fmt.Println(countDestinations(ctx, "BOS", flightRoutes))
 
-	os.Exit(0)
 }
 
 // countDestinations processes flight routes from a given origin
@@ -52,32 +51,35 @@ func countDestinations(ctx context.Context, origin string, flightRoutes []string
 		return 0, nil
 	}
 
-	// Create a wait group to synchronize goroutines
-	var wg sync.WaitGroup
-
-	// Create channels for work and results
-	jobs := make(chan job, numberOfWorkers)
-	results := make(chan result, numberOfWorkers)
-
-	// Spawn worker goroutines
-	for i := 0; i < numberOfWorkers; i++ {
-		wg.Go(func() { worker(ctx, i, jobs, results, getDestination) })
-	}
-
+	fmt.Println(runtime.NumGoroutine())
 	// Add jobs and close the jobs channel when done
-	wg.Go(func() {
-		defer close(jobs)
-		addJobs(ctx, origin, flightRoutes, chunkSize, jobs)
+	jobs := addJobs(ctx, origin, flightRoutes, numberOfWorkers, chunkSize)
+	results := startWorkers(ctx, numberOfWorkers, jobs, func(j job) result {
+		// Debug log
+		fmt.Printf("job %q\n", j)
+
+		// Simulate work
+		time.Sleep(time.Second * 1)
+
+		// Create a map to store unique destinations
+		destMap := map[string]struct{}{}
+
+		for _, route := range j.routes {
+			// Attempt to get destination for the current route
+			dest, ok := getDestination(j.origin, route)
+			if !ok {
+				// Skip routes that can't be processed
+				continue
+			}
+			// Check if destination is already in map
+			if _, ok := destMap[dest]; ok {
+				continue
+			}
+			destMap[dest] = struct{}{}
+		}
+
+		return result{destinations: destMap}
 	})
-
-	// Cleanup
-	go func() {
-		// Wait for all work to be done
-		wg.Wait()
-
-		// Close results channel after all workers finish
-		close(results)
-	}()
 
 	// Collect and deduplicate destinations
 	res := map[string]struct{}{}
