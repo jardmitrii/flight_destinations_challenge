@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -28,7 +29,10 @@ func addJobs(ctx context.Context, origin string, routes []string, bufferSize, ch
 				// Calculate the end index for the current chunk, ensuring we don't exceed route list
 				end := min(i+chunkSize, len(routes))
 				// Send a job with a subset of routes to the jobs channel
-				jobs <- job{origin: origin, routes: routes[i:end]}
+				j := job{origin: origin, routes: routes[i:end]}
+				jobs <- j
+				// Debug log
+				fmt.Printf("job added %q\n", j)
 				time.Sleep(time.Second)
 			}
 		}

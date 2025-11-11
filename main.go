@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"maps"
 	"os/signal"
-	"runtime"
 	"slices"
 	"syscall"
 	"time"
@@ -38,7 +37,6 @@ func main() {
 	fmt.Println(countDestinations(ctx, "LAX", flightRoutes))
 	fmt.Println(countDestinations(ctx, "LON", flightRoutes))
 	fmt.Println(countDestinations(ctx, "BOS", flightRoutes))
-
 }
 
 // countDestinations processes flight routes from a given origin
@@ -51,12 +49,11 @@ func countDestinations(ctx context.Context, origin string, flightRoutes []string
 		return 0, nil
 	}
 
-	fmt.Println(runtime.NumGoroutine())
 	// Add jobs and close the jobs channel when done
 	jobs := addJobs(ctx, origin, flightRoutes, numberOfWorkers, chunkSize)
 	results := startWorkers(ctx, numberOfWorkers, jobs, func(j job) result {
 		// Debug log
-		fmt.Printf("job %q\n", j)
+		fmt.Printf("job started %q\n", j)
 
 		// Simulate work
 		time.Sleep(time.Second * 1)

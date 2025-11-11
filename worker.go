@@ -32,21 +32,9 @@ func startWorkers(ctx context.Context, workersCount int, jobs <-chan job, work f
 
 					// Debug log
 					fmt.Printf("Worker %d processing job \n", i)
-					r := work(j)
+					results <- work(j)
 					// Debug log
 					fmt.Printf("Worker %d finished job \n", i)
-
-					select {
-					case results <- r:
-						fmt.Printf("Worker %d results ok\n", i)
-					case <-ctx.Done():
-						// Debug log
-						fmt.Printf("Worker %d shutting down, results\n", i)
-						return
-						//default:
-						//	results <- r
-						//	fmt.Printf("Worker %d results ok\n", i)
-					}
 
 				case <-ctx.Done():
 					// Context canceled, stop working
@@ -59,8 +47,6 @@ func startWorkers(ctx context.Context, workersCount int, jobs <-chan job, work f
 
 	go func() {
 		// Cleanup
-
-		<-ctx.Done()
 		// Wait for all work to be done
 		wg.Wait()
 
